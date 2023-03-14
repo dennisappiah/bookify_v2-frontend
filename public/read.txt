@@ -1,0 +1,8 @@
+Stores all utilities functions and classes (resuabilty)
+- creating paginate component first
+- filter component second
+- sort component third
+
+* Apply filtering after you sort your data before pagination
+
+Filtering -> sorting -> pagination
