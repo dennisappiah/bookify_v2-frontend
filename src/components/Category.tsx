@@ -12,7 +12,8 @@ const Category = ({category, currentFilter, onFilterSelect,}: CategoryProps) => 
 
     return (
         <li  onClick={() => onFilterSelect(category)} 
-        className={`${category === currentFilter? "list-group-item active clickable": "list-group-item" }`}>{name}
+        className={`${category === currentFilter? "list-group-item active clickable ": 
+        "list-group-item " }`}>{name}
         </li>
     )
 }
