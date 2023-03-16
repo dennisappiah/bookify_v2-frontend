@@ -9,6 +9,11 @@ import Pagination from '../components/Pagination';
 import { Paginate } from '../utils/paginate';
 //import lodash
 import _ from 'lodash-es'
+//import link
+import { Link } from 'react-router-dom';
+//import SelectBox
+import SelectBox from '../components/common/SelectBox';
+
 
 const Home = () => {
   //get books from BookContext
@@ -23,9 +28,10 @@ const Home = () => {
     currentFilter,
     filterByCategory,
     handleSortByColumn,
-    sortColumn
+    sortColumn,
+    handleSearch
     } = useContext(BookContext);
-    
+
   //get categories from categoryContext
   const {categories} = useContext(CategoryContext);
   const {length: count} = books;
@@ -33,11 +39,16 @@ const Home = () => {
   if (count === 0) return (<p>There are no books books in the database</p>);
 
   //Filtering -> Sorting -> Paginating (books)
-  
-  //Filtering books
-  const filteredBooks = currentFilter && currentFilter._id ? 
-  books.filter((book) => book.category._id === currentFilter._id) : books;
 
+  //Filtering books
+  let filteredBooks = books;
+  if (searchQuery) {
+    filteredBooks = books.filter(b => b.title.toLowerCase().startsWith(searchQuery.toLowerCase()));
+  } else {
+    filteredBooks = currentFilter && currentFilter._id ? 
+    books.filter((book) => book.category._id === currentFilter._id) : books;
+  }
+  
   //sorting books
   const sortedBooks = _.orderBy(filteredBooks, [sortColumn.column], [sortColumn.order])
 
@@ -66,8 +77,14 @@ const Home = () => {
               })}
           </ul>
         </div>
-        <div className='col'>
+        <div className='col mt-4'>
+        <Link  
+          to={`/books/new`} 
+          className="btn btn-primary" style={{ marginBottom: 10}}>
+          Add Book
+       </Link>
         <p>Showing {filteredBooks.length} books in the database</p>
+        <SelectBox value={searchQuery} onChange={handleSearch} />
         <table className="table">
           <thead>
             <tr>
