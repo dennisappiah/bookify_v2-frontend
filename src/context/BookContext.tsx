@@ -2,6 +2,7 @@ import React, {createContext, useState, useEffect} from 'react'
 import {Book} from '../models/Book'
 // import getBook from Bookservice
 import {getbooks} from "./../services/FakeServices/fakeBooksService"
+import BooksFormSchema from '../schemas/booksSchema';
 
 interface IBookContext{
   books: Book[];
@@ -10,11 +11,28 @@ interface IBookContext{
   changePage: (page:number) => void
   filterByCategory: (category: {_id: string , name: string }) => void
   handleSortByColumn: (newColumn: string) => void
+  handleSearch: (e:React.ChangeEvent<HTMLInputElement>) => void
   currentPage : number;
   pageSize : number;
   searchQuery: string;
   sortColumn: {column: string, order: any}
-  currentFilter : { _id: string, name: string }
+  currentFilter : { _id: string, name: string };
+  data: {
+    title: string,
+    categoryId: string,
+    numberInStock: number,
+    dailyRentalRate: number
+  },
+  errors: {
+    title: string,
+    categoryId: string,
+    numberInStock: string,
+    dailyRentalRate: string
+  },
+  handleSelectChange : (e: React.ChangeEvent<HTMLSelectElement>) => void,
+  handleChange: (e:React.ChangeEvent<HTMLInputElement>) => void
+  validateProperty: (field: string) => void
+  submitted: boolean
 }
 
 type BookProviderProps = {
@@ -29,13 +47,29 @@ export const BookContext = createContext<IBookContext>({
   changePage: () => {},
   filterByCategory: () => {},
   handleSortByColumn: () => {},
+  handleSearch: () => {},
   currentPage: 1,
   pageSize: 4,
   searchQuery: "",
-  sortColumn: {
-    column: "title", order: "asc" 
+  sortColumn: {column: "title", order: "asc" 
   },
   currentFilter: {_id: "", name: "" },
+  data: {
+    title: "",
+    categoryId: "",
+    numberInStock: 0,
+    dailyRentalRate: 0
+  },
+  errors: {
+    title: "",
+    categoryId: "",
+    numberInStock: "",
+    dailyRentalRate: ""
+  },
+  handleSelectChange: () => {},
+  handleChange: () => {},
+  validateProperty: () => {},
+  submitted: false
 });
 
 export const BookProvider = ({children}: BookProviderProps) => {
@@ -53,9 +87,27 @@ export const BookProvider = ({children}: BookProviderProps) => {
     order: "asc"
   });
 
-
   //current Filter state
   const [currentFilter, setCurrentFilter] = useState({ _id: "", name: ""});
+
+  //data state
+  const [data, setData] = useState({
+    title: "",
+    categoryId: "",
+    numberInStock: 0,
+    dailyRentalRate: 0
+  });
+  
+  //errors state
+  const [errors, setErrors] = useState({
+    title: "",
+    categoryId: "",
+    numberInStock: "",
+    dailyRentalRate: ""
+  });
+
+  //submitted state
+  const [submitted, setSubmitted] = useState(false);
 
   //delete book
   const removeBook = (_id: string) => {
@@ -89,6 +141,7 @@ export const BookProvider = ({children}: BookProviderProps) => {
   //Filter books by category 
   const filterByCategory = (category: {_id: string, name: string}) => { 
     setCurrentFilter(category);
+    setSearchQuery("");
     setCurrentPage(1);
   };
 
@@ -104,7 +157,68 @@ export const BookProvider = ({children}: BookProviderProps) => {
       setSortColumn(newSortColumn);
   }
 
+  //handle Search
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.currentTarget;
+    // currentFilter: "", currentPage: 1
+    setSearchQuery(value);
+    setCurrentFilter({_id: "", name: ""});
+    setCurrentPage(1);
+  }
 
+  //validating Form after submission
+  const validateForm = async (): Promise<boolean> => {
+    try {
+      await BooksFormSchema.validate(data, { abortEarly: false });
+      setErrors({title: "", categoryId: "", numberInStock: "", dailyRentalRate: ""});
+      return true;
+    } catch (err: any) {
+      const newErrors = err.inner.reduce((acc:any, curr:any) => {
+        return { ...acc, [curr.path]: curr.message };
+      }, {});
+      setErrors(newErrors);
+      return false;
+    }
+  };
+  
+  //validating individual property of account state
+  const validateProperty = async (field: string) => {
+    try {
+      await BooksFormSchema.validateAt(field, data);
+      setErrors(errors => ({ ...errors, [field]: "" }));
+    } catch (err: any) {
+      setErrors(errors => ({ ...errors, [field]: err.message }));
+    }
+  };
+
+  //handlechange
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.currentTarget;
+    const newValue = (name === "numberInStock" || name== "dailyRentalRate") ? parseInt(value) || 0 : value;
+    setData((prevData) => ({ ...prevData, [name]: newValue }));
+    validateProperty(name);
+  };
+
+  //HandleCategorySelect Change
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setData(data => {
+      console.log(`Previous state: ${JSON.stringify(data)}`);
+      const newState = { ...data, [name]: value };
+      console.log(`New state: ${JSON.stringify(newState)}`);
+      return newState;
+    });
+    validateProperty(name);
+  };
+  
+
+  useEffect(() => {
+    if (submitted) {
+      validateForm();
+    }
+  }, [data, submitted]);
+
+  
   //fetch books to update the state
   useEffect(() => {
     const fetchBooks = async () => {
@@ -125,7 +239,14 @@ export const BookProvider = ({children}: BookProviderProps) => {
       sortColumn,
       currentFilter,
       filterByCategory,
-      handleSortByColumn
+      handleSortByColumn,
+      handleSearch,
+      data,
+      errors,
+      handleSelectChange,
+      handleChange,
+      validateProperty,
+      submitted
     }}>
       {children}
   </BookContext.Provider>

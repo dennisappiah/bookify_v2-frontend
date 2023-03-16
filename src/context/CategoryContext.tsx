@@ -1,10 +1,12 @@
 import React, {createContext, useState, useEffect} from 'react'
 import { Category } from './../models/Category';
+import BooksFormSchema from '../schemas/booksSchema';
 // import getCategory from categoryservice
 import {getCategory} from "./../services/FakeServices/faksCategoryServices"
 
 interface ICategoryContext{
   categories: Category[];
+  
 }
 
 type CategoryProviderProps = {
@@ -17,9 +19,10 @@ export const CategoryContext = createContext<ICategoryContext>({
 });
 
 const CategoryProvider = ({children}: CategoryProviderProps) => {
+
   //categories state
   const [categories, setCategory] = useState<Category[]>([]);
-
+ 
   //fetch categories to update
   useEffect(() => {
     const fetchCategory = async () => {
@@ -29,12 +32,12 @@ const CategoryProvider = ({children}: CategoryProviderProps) => {
     };
     fetchCategory();
   }, []);
-
   return (
     <CategoryContext.Provider
      value=
      {{
-      categories
+      categories,
+    
     }}>{children}</CategoryContext.Provider>
   )
 }
