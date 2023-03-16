@@ -1,6 +1,4 @@
 import * as categoryAPI from "./faksCategoryServices";
-import {Book} from "../../models/Book";
-
 
 const books = [
     {
@@ -74,22 +72,38 @@ export const getbooks = () => {
     return books;
 }
 
-export const getBookById = (_id:string) => {
-    return books.find(book => book._id === _id);
+
+//get book by id
+export const getBook = (id:string) => {
+    return books.find(book => book._id === id);
 }
 
-// export function saveBook(book: Book) {
-//     let bookInDb = books.find(m => m._id === book._id);
-//     bookInDb.title = book.title;
-//     bookInDb.category = categoryAPI.genres.find(g => g._id === book.genreId);
-//     bookInDb.numberInStock = book.numberInStock;
-//     bookInDb.dailyRentalRate = book.dailyRentalRate;
+//save book object
+export const saveBook = (book: any) => {
+  let bookInDb: any = books.find(m => m._id === book._id) || {};
+  bookInDb.title = book.title;
+  bookInDb.category = categoryAPI.category.find(g => g._id === book.categoryId);
+  bookInDb.numberInStock = book.numberInStock;
+  bookInDb.dailyRentalRate = book.dailyRentalRate;
+
+  if (!bookInDb._id) {
+    bookInDb._id = Date.now().toString();
+    books.push(bookInDb);
+  }
+
+  return bookInDb as {
+    title: string,
+    category: string,
+    numberInStock: number,
+    dailyRentalRate: number
+  };
+}
+
+export const deleteBook = (id: string) => {
+    let bookInDb = books.find(m => m._id === id);
+    if (bookInDb)
+    books.splice(books.indexOf(bookInDb), 1);
+    return bookInDb;
+}
   
-//     if (!bookInDb._id) {
-//       movieInDb._id = Date.now().toString()
-//       books.push(movieInDb);
-//     }
-  
-//     return movieInDb;
-//   }
   
