@@ -1,8 +1,9 @@
 import React, {createContext, useState, useEffect} from 'react'
 import { Category } from './../models/Category';
 import BooksFormSchema from '../schemas/booksSchema';
-// import getCategory from categoryservice
-import {getCategory} from "./../services/FakeServices/faksCategoryServices"
+import {getCategory} from "../services/CategoriesService"
+// import {getCategory} from "./../services/FakeServices/faksCategoryServices"
+
 
 interface ICategoryContext{
   categories: Category[];

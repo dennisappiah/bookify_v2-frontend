@@ -2,11 +2,13 @@ import React, {createContext, useState, useEffect} from 'react'
 import {Book} from '../models/Book'
 // import getBook from Bookservice
 import {getbooks} from "./../services/FakeServices/fakeBooksService"
+import { getBooks , deleteBook } from '../services/BooksService';
 import BooksFormSchema from '../schemas/booksSchema';
+import { toast } from 'react-toastify';
 
 interface IBookContext{
   books: Book[];
-  removeBook: (_id:string) => void;
+  handleBookDelete: (_id:string) => void;
   likeBook: (_id:string) => void;
   changePage: (page:number) => void
   filterByCategory: (category: {_id: string , name: string }) => void
@@ -16,24 +18,8 @@ interface IBookContext{
   pageSize : number;
   searchQuery: string;
   sortColumn: {column: string, order: any}
-  currentFilter : { _id: string, name: string };
-  data: {
-    title: string,
-    categoryId: string,
-    numberInStock: number,
-    dailyRentalRate: number
-  },
-  errors: {
-    title: string,
-    categoryId: string,
-    numberInStock: string,
-    dailyRentalRate: string
-  },
-  handleSelectChange : (e: React.ChangeEvent<HTMLSelectElement>) => void,
-  handleChange: (e:React.ChangeEvent<HTMLInputElement>) => void
-  validateProperty: (field: string) => void
-  submitted: boolean
-}
+  currentFilter : { _id: string, name: string }
+ }
 
 type BookProviderProps = {
   children: React.ReactNode
@@ -42,7 +28,7 @@ type BookProviderProps = {
 //create context 
 export const BookContext = createContext<IBookContext>({
   books: [],
-  removeBook: () => {},
+  handleBookDelete: () => {},
   likeBook: () => {},
   changePage: () => {},
   filterByCategory: () => {},
@@ -54,22 +40,6 @@ export const BookContext = createContext<IBookContext>({
   sortColumn: {column: "title", order: "asc" 
   },
   currentFilter: {_id: "", name: "" },
-  data: {
-    title: "",
-    categoryId: "",
-    numberInStock: 0,
-    dailyRentalRate: 0
-  },
-  errors: {
-    title: "",
-    categoryId: "",
-    numberInStock: "",
-    dailyRentalRate: ""
-  },
-  handleSelectChange: () => {},
-  handleChange: () => {},
-  validateProperty: () => {},
-  submitted: false
 });
 
 export const BookProvider = ({children}: BookProviderProps) => {
@@ -90,31 +60,23 @@ export const BookProvider = ({children}: BookProviderProps) => {
   //current Filter state
   const [currentFilter, setCurrentFilter] = useState({ _id: "", name: ""});
 
-  //data state
-  const [data, setData] = useState({
-    title: "",
-    categoryId: "",
-    numberInStock: 0,
-    dailyRentalRate: 0
-  });
   
-  //errors state
-  const [errors, setErrors] = useState({
-    title: "",
-    categoryId: "",
-    numberInStock: "",
-    dailyRentalRate: ""
-  });
-
-  //submitted state
-  const [submitted, setSubmitted] = useState(false);
-
   //delete book
-  const removeBook = (_id: string) => {
-    const newBooks = books.filter((book) => {
+  const handleBookDelete = async(_id: string) => {
+    //updating ui first before server call
+    const originalBooks = books;
+    const newBooks = originalBooks.filter((book) => {
       return book._id !== _id;
     });
     setBooks(newBooks);
+    try {
+      await deleteBook(_id);
+    } catch (ex: any) {
+      if (ex.response && ex.response === 404){
+        toast.error("This book has already been deleted");
+        setBooks(originalBooks);
+      }
+    }
   };
 
   //like book
@@ -165,64 +127,11 @@ export const BookProvider = ({children}: BookProviderProps) => {
     setCurrentFilter({_id: "", name: ""});
     setCurrentPage(1);
   }
-
-  //validating Form after submission
-  const validateForm = async (): Promise<boolean> => {
-    try {
-      await BooksFormSchema.validate(data, { abortEarly: false });
-      setErrors({title: "", categoryId: "", numberInStock: "", dailyRentalRate: ""});
-      return true;
-    } catch (err: any) {
-      const newErrors = err.inner.reduce((acc:any, curr:any) => {
-        return { ...acc, [curr.path]: curr.message };
-      }, {});
-      setErrors(newErrors);
-      return false;
-    }
-  };
-  
-  //validating individual property of account state
-  const validateProperty = async (field: string) => {
-    try {
-      await BooksFormSchema.validateAt(field, data);
-      setErrors(errors => ({ ...errors, [field]: "" }));
-    } catch (err: any) {
-      setErrors(errors => ({ ...errors, [field]: err.message }));
-    }
-  };
-
-  //handlechange
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.currentTarget;
-    const newValue = (name === "numberInStock" || name== "dailyRentalRate") ? parseInt(value) || 0 : value;
-    setData((prevData) => ({ ...prevData, [name]: newValue }));
-    validateProperty(name);
-  };
-
-  //HandleCategorySelect Change
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setData(data => {
-      console.log(`Previous state: ${JSON.stringify(data)}`);
-      const newState = { ...data, [name]: value };
-      console.log(`New state: ${JSON.stringify(newState)}`);
-      return newState;
-    });
-    validateProperty(name);
-  };
-  
-
-  useEffect(() => {
-    if (submitted) {
-      validateForm();
-    }
-  }, [data, submitted]);
-
   
   //fetch books to update the state
   useEffect(() => {
     const fetchBooks = async () => {
-      const books = await getbooks();
+      const books = await getBooks();
       setBooks(books);
     };
     fetchBooks();
@@ -230,7 +139,7 @@ export const BookProvider = ({children}: BookProviderProps) => {
   return (
     <BookContext.Provider value={{
       books, 
-      removeBook, 
+      handleBookDelete, 
       likeBook,
       changePage,
       pageSize,
@@ -240,13 +149,7 @@ export const BookProvider = ({children}: BookProviderProps) => {
       currentFilter,
       filterByCategory,
       handleSortByColumn,
-      handleSearch,
-      data,
-      errors,
-      handleSelectChange,
-      handleChange,
-      validateProperty,
-      submitted
+      handleSearch
     }}>
       {children}
   </BookContext.Provider>
