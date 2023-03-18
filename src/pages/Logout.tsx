@@ -1,9 +1,16 @@
-import React from 'react'
+import React, {useEffect} from 'react'
+import { logOut } from "../services/AuthService"
 
-const Logout = () => {
+const LogOut = () => {
+ useEffect(() => {
+    logOut();
+
+    // for full reloading of the page
+    window.location.assign("/");
+     }, []);
   return (
-    <div>Logout</div>
+    null
   )
 }
 
-export default Logout
+export default LogOut

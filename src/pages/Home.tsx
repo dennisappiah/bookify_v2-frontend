@@ -14,8 +14,11 @@ import { Link } from 'react-router-dom';
 //import SelectBox
 import SelectBox from '../components/common/SelectBox';
 
+interface HomeProps {
+  user: any
+}
 
-const Home = () => {
+const Home = ({user}: HomeProps) => {
   //get books from BookContext
   const {
     books , 
@@ -23,7 +26,7 @@ const Home = () => {
     pageSize, 
     currentPage, 
     likeBook,
-    removeBook,
+    handleBookDelete,
     changePage,
     currentFilter,
     filterByCategory,
@@ -78,11 +81,14 @@ const Home = () => {
           </ul>
         </div>
         <div className='col mt-4'>
-        <Link  
+          {/* if authenticated , display Add Book element */}
+          {
+          user && <Link  
           to={`/books/new`} 
           className="btn btn-primary" style={{ marginBottom: 10}}>
           Add Book
-       </Link>
+         </Link>
+        }
         <p>Showing {filteredBooks.length} books in the database</p>
         <SelectBox value={searchQuery} onChange={handleSearch} />
         <table className="table">
@@ -105,7 +111,7 @@ const Home = () => {
           <tbody>
             {paginatedBooks.map(book => {
               return (
-                <Book book={book} key={book._id} onLike={likeBook} onRemove={removeBook} />
+                <Book book={book} key={book._id} onLike={likeBook} onRemove={handleBookDelete}/>
               )
             } )}
           </tbody>
