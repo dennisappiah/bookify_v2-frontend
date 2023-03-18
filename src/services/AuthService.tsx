@@ -6,7 +6,7 @@ import jwtDecode from 'jwt-decode'
 export const loginUser = async(email: string, password:string) => {
     try {
         const response = await axiosInstance.post<Login>('/auth' , {email, password});
-        return response.data
+        return response
     }
     catch (error) {
             throw error;
