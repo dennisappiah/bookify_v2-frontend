@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useState} from 'react'
 
 interface InputProps {
     name: string
@@ -10,6 +10,11 @@ interface InputProps {
 }
 
 const CustomInput = ({name, value, label,error,type, onChange} : InputProps) => {
+  const [touched, setTouched] = useState(false)
+
+  const handleBlur = () => {
+    setTouched(true)
+  }
   return (
   <div className="mb-3 form-group">
     <label htmlFor={name} className="form-label">{label}</label>
@@ -20,8 +25,9 @@ const CustomInput = ({name, value, label,error,type, onChange} : InputProps) => 
     type={type}
     className="form-control" 
     onChange={onChange}
+    onBlur={handleBlur}
     />
-     {error && <div className="alert alert-danger">{error}</div>}
+     {touched && error && <div className="alert alert-danger">{error}</div>}
   </div>
   )
 }
