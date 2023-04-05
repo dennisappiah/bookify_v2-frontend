@@ -1,109 +1,127 @@
-import React, { useContext, useState, useEffect } from "react";
-import CustomInput from "../components/common/CustomInput";
-// import resgisterSchema for validation
 import { registerSchema } from "./../schemas/registerSchema";
 //import services
 import { registerUser } from "../services/userService";
 import { storeToken } from "../services/AuthService";
+import { Formik, Field, FormikHelpers } from "formik";
+
+interface RegisterFormValues {
+  email: string;
+  password: string;
+  name: string;
+}
 
 const RegisterForm = () => {
-  //register state
-  const [data, setData] = useState({ email: "", password: "", name: "" });
-  //errors state
-  const [errors, setErrors] = useState({ email: "", password: "", name: "" });
-  //submitted state
-  const [submitted, setSubmitted] = useState(false);
-
-  const [isValid, setIsValid] = useState(false);
-  useEffect(() => {
-    setIsValid(Object.values(errors).every((error) => error === ""));
-  }, [errors]);
-
-  //validating Form after submission
-  const validateForm = async (): Promise<boolean> => {
-    try {
-      await registerSchema.validate(data, { abortEarly: false });
-      setErrors({ email: "", password: "", name: "" });
-      return true;
-    } catch (err: any) {
-      const newErrors = err.inner.reduce((acc: any, curr: any) => {
-        return { ...acc, [curr.path]: curr.message };
-      }, {});
-      setErrors(newErrors);
-      return false;
-    }
+  const initialValues: RegisterFormValues = {
+    email: "",
+    password: "",
+    name: "",
   };
 
-  //validating individual property of register state
-  const validateProperty = async (field: string) => {
+  const handleFormSubmit = async (
+    values: RegisterFormValues,
+    { setErrors }: FormikHelpers<RegisterFormValues>
+  ) => {
     try {
-      await registerSchema.validateAt(field, data);
-      setErrors((errors) => ({ ...errors, [field]: "" }));
-    } catch (err: any) {
-      setErrors((errors) => ({ ...errors, [field]: err.message }));
-    }
-  };
-
-  //handle Login Submit & validating form
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      const response = await registerUser(data.email, data.password, data.name);
+      const response = await registerUser(
+        values.email,
+        values.password,
+        values.name
+      );
       // logging in the user upon registration
       storeToken(response.headers["x-auth-token"]);
       // for  full reloading the application after login
       window.location = "/" as unknown as Location;
-      setSubmitted(true);
     } catch (ex: any) {
       if ((ex as any).response && (ex as any).response.status === 400) {
-        setErrors({ ...errors, email: (ex as any).response.data });
+        setErrors({ email: "User is already registered" });
       }
     }
   };
 
-  //handle email and password change
-  const handleChange = (e: React.FormEvent<HTMLInputElement>) => {
-    const { name, value } = e.currentTarget;
-    setData((data) => ({ ...data, [name]: value }));
-    // validateProperty(name);
-  };
-
-  useEffect(() => {
-    if (submitted) {
-      validateForm();
-    }
-  }, [data, submitted]);
-
   return (
-    <form onSubmit={handleSave}>
-      <CustomInput
-        name="email"
-        value={data.email}
-        error={errors.email}
-        label="Username"
-        type="email"
-        onChange={handleChange}
-      />
-      <CustomInput
-        name="password"
-        value={data.password}
-        error={errors.password}
-        label="Password"
-        type="password"
-        onChange={handleChange}
-      />
-      <CustomInput
-        name="name"
-        value={data.name}
-        error={errors.name}
-        label="Name"
-        type="text"
-        onChange={handleChange}
-      />
-      <button type="submit" className="btn btn-primary">
-        Register
-      </button>
-    </form>
+    <div>
+      <Formik
+        initialValues={initialValues}
+        validationSchema={registerSchema}
+        onSubmit={handleFormSubmit}
+      >
+        {({
+          values,
+          errors,
+          touched,
+          handleBlur,
+          handleSubmit,
+          handleChange,
+          isSubmitting,
+        }) => (
+          <div className="mb-3 form-group">
+            <form onSubmit={handleSubmit}>
+              {/* Email field */}
+              <label htmlFor="email" className="form-label">
+                Email
+              </label>
+              <Field
+                id="email"
+                name="email"
+                className="form-control"
+                value={values.email}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                error={touched.email && errors.email ? errors.email : undefined}
+              />
+              {touched.email && errors.email && (
+                <div className="alert alert-danger">{errors.email}</div>
+              )}
+              {/* Password field */}
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <Field
+                id="password"
+                name="password"
+                className="form-control"
+                value={values.password}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                error={
+                  touched.password && errors.password
+                    ? errors.password
+                    : undefined
+                }
+              />
+              {touched.password && errors.password && (
+                <div className="alert alert-danger">{errors.password}</div>
+              )}
+              {/* Name field */}
+              <label htmlFor="name" className="form-label">
+                Name
+              </label>
+              <Field
+                id="name"
+                name="name"
+                className="form-control"
+                value={values.name}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                error={touched.name && errors.name ? errors.name : undefined}
+              />
+              {touched.name && errors.name && (
+                <div className="alert alert-danger">{errors.name}</div>
+              )}
+              <div style={{ marginTop: "15px" }}>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn btn-primary"
+                >
+                  Register
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </Formik>
+    </div>
   );
 };
 

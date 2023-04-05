@@ -3,16 +3,16 @@ import * as yup from "yup";
 // const categoryIdPattern = /^[0-9a-fA-F]{24}$/;
 
 export const BooksFormSchema = yup.object().shape({
-  title: yup.string().required("Title is required"),
-  categoryId: yup.string().required("Category is required"),
+  title: yup.string().required("title is a required field"),
+  categoryId: yup.string().required("category is a required field"),
   // categoryId: yup.string().matches(categoryIdPattern, 'Invalid category ID').required('Category is required'),
   numberInStock: yup
     .number()
-    .required("Number in stock is required")
+    .required("numberInStock is a required field")
     .positive("Number in stock must be a positive number"),
   dailyRentalRate: yup
     .number()
-    .required("Daily rental rate is required")
+    .required("dailyRentalRate is a required field")
     .positive("Daily rental rate must be a positive number"),
 });
 

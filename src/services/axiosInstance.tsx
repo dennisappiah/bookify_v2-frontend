@@ -11,7 +11,7 @@ const instance = axios.create({
 instance.interceptors.response.use(null, (error: any) => {
   const expectedError =
     error.response &&
-    error.response.status > 400 &&
+    error.response.status === 400 &&
     error.response.status <= 500;
 
   if (!expectedError) {

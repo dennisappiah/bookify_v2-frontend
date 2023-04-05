@@ -7,6 +7,7 @@ interface InputProps {
   error: string;
   type: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: () => void;
 }
 
 const CustomInput = ({
@@ -16,11 +17,13 @@ const CustomInput = ({
   error,
   type,
   onChange,
+  onBlur,
 }: InputProps) => {
   const [touched, setTouched] = useState(false);
 
   const handleBlur = () => {
     setTouched(true);
+    if (onBlur) onBlur();
   };
   return (
     <div className="mb-3 form-group">

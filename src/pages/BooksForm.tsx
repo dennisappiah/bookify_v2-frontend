@@ -1,4 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getCurrentUser } from "../services/AuthService";
 // import useParams
 import { useParams } from "react-router-dom";
 //import CategoryContext
@@ -6,86 +8,30 @@ import { CategoryContext } from "../context/CategoryContext";
 // import { getBook, saveBook} from '../services/FakeServices/fakeBooksService';
 import { getBook, saveBook } from "../services/BooksService";
 import CustomSelect from "../components/common/CustomSelect";
-import CustomInput from "../components/common/CustomInput";
-//navigate
-import { useNavigate } from "react-router-dom";
 import BooksFormSchema from "../schemas/booksSchema";
+import { Formik, Field } from "formik";
+
+interface BookFormValues {
+  title: string;
+  categoryId: string;
+  numberInStock: number;
+  dailyRentalRate: number;
+}
 
 const BooksForm = () => {
   //setting id by default to new
-  const { id = "new" } = useParams();
+  const { id = "" } = useParams();
   const { categories } = useContext(CategoryContext);
-  const [data, setData] = useState({
+  let navigate = useNavigate();
+
+  const [initialValues, setInitialValues] = useState<BookFormValues>({
     title: "",
     categoryId: "",
     numberInStock: 0,
     dailyRentalRate: 0,
   });
 
-  //errors state
-  const [errors, setErrors] = useState({
-    title: "",
-    categoryId: "",
-    numberInStock: "",
-    dailyRentalRate: "",
-  });
-  const [isValid, setIsValid] = useState(false);
-  //submitted state
-  const [submitted, setSubmitted] = useState(false);
-  let navigate = useNavigate();
-
-  //validating Form after submission
-  const validateForm = async (): Promise<boolean> => {
-    try {
-      await BooksFormSchema.validate(data, { abortEarly: false });
-      setErrors({
-        title: "",
-        categoryId: "",
-        numberInStock: "",
-        dailyRentalRate: "",
-      });
-      return true;
-    } catch (err: any) {
-      const newErrors = err.inner.reduce((acc: any, curr: any) => {
-        return { ...acc, [curr.path]: curr.message };
-      }, {});
-      setErrors(newErrors);
-      return false;
-    }
-  };
-
-  //validating individual property of account state
-  const validateProperty = async (field: string) => {
-    try {
-      await BooksFormSchema.validateAt(field, data);
-      setErrors((errors) => ({ ...errors, [field]: "" }));
-    } catch (err: any) {
-      setErrors((errors) => ({ ...errors, [field]: err.message }));
-    }
-  };
-
-  //handlechange
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.currentTarget;
-    const newValue =
-      name === "numberInStock" || name == "dailyRentalRate"
-        ? parseInt(value) || 0
-        : value;
-    setData((prevData) => ({ ...prevData, [name]: newValue }));
-    validateProperty(name);
-  };
-
-  //HandleCategorySelect Change
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setData((data) => {
-      const newState = { ...data, [name]: value };
-      return newState;
-    });
-    // validateProperty(name);
-  };
-
-  const mapToViewModel = (book: any) => {
+  const mapToViewModel = (book: BookFormValues) => {
     return {
       title: book.title,
       categoryId: book.categoryId,
@@ -94,75 +40,136 @@ const BooksForm = () => {
     };
   };
 
-  const populateBook = async () => {
+  useEffect(() => {
+    const populateBook = async () => {
+      try {
+        if (id === "new") return;
+        const data = await getBook(id);
+        setInitialValues(mapToViewModel(data));
+      } catch (ex: any) {
+        if (ex.response && ex.response.status === 500) {
+          navigate("/not-found", { replace: true });
+        }
+      }
+    };
+    populateBook();
+  }, [id]);
+
+  const handleFormSubmit = async (values: BookFormValues) => {
     try {
-      const bookId = id;
-      if (bookId === "new") return;
-      const data = await getBook(bookId);
-      setData(mapToViewModel(data));
+      await saveBook(values);
+      // for  full reloading the application after save
+      window.location = "/" as unknown as Location;
     } catch (ex: any) {
-      if (ex.response && ex.response.status === 500) {
-        navigate("/not-found", { replace: true });
+      if ((ex as any).response && (ex as any).response.status === 400) {
+        console.log("error");
       }
     }
   };
 
-  //get Book by id
-  useEffect(() => {
-    populateBook();
-  }, [id]);
-
-  useEffect(() => {
-    if (submitted) {
-      validateForm();
-    }
-  }, [data, submitted]);
-
-  //save book object
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    await saveBook(data);
-    // for  full reloading the application after save
-    window.location = "/" as unknown as Location;
-  };
-
   return (
-    <form onSubmit={handleSave} className="container">
-      <CustomInput
-        name="title"
-        value={data.title}
-        error={errors.title}
-        label="Title"
-        type="text"
-        onChange={handleChange}
-      />
-      <CustomSelect
-        name="categoryId"
-        options={categories}
-        label="Category"
-        error={errors.categoryId}
-        onChange={handleSelectChange}
-      />
-      <CustomInput
-        name="numberInStock"
-        value={data.numberInStock}
-        error={errors.numberInStock}
-        label="Number In Stock"
-        type="number"
-        onChange={handleChange}
-      />
-      <CustomInput
-        name="dailyRentalRate"
-        value={data.dailyRentalRate}
-        error={errors.dailyRentalRate}
-        label="Rate"
-        type="number"
-        onChange={handleChange}
-      />
-      <button type="submit" className="btn btn-primary">
-        Save
-      </button>
-    </form>
+    <div>
+      <Formik
+        initialValues={initialValues}
+        onSubmit={handleFormSubmit}
+        validationSchema={BooksFormSchema}
+      >
+        {({
+          values,
+          errors,
+          touched,
+          handleBlur,
+          handleChange,
+          handleSubmit,
+          isSubmitting,
+          setFieldValue,
+        }) => (
+          <div className="mb-3 form-group">
+            <form onSubmit={handleSubmit}>
+              {/* Title field */}
+              <label htmlFor="title" className="form-label">
+                Title
+              </label>
+              <Field
+                id="title"
+                name="title"
+                className="form-control"
+                value={values.title}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                error={touched.title && errors.title ? errors.title : undefined}
+              />
+              {touched.title && errors.title && (
+                <div className="alert alert-danger">{errors.title}</div>
+              )}
+              {/* Category Select field */}
+              <CustomSelect
+                name="categoryId"
+                options={categories}
+                label="Category"
+                error={errors.categoryId}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                  setFieldValue("categoryId", e.target.value);
+                }}
+              />
+              {/* Number In Stock field */}
+              <label htmlFor="numberInStock" className="form-label">
+                Number In Stock
+              </label>
+              <Field
+                id="numberInStock"
+                name="numberInStock"
+                className="form-control"
+                value={values.numberInStock}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                type="number"
+                error={
+                  touched.numberInStock && errors.numberInStock
+                    ? errors.numberInStock
+                    : undefined
+                }
+              />
+              {touched.numberInStock && errors.numberInStock && (
+                <div className="alert alert-danger">{errors.numberInStock}</div>
+              )}
+              {/* DailyRental Rate field */}
+              <label htmlFor="dailyRentalRate" className="form-label">
+                Daily Rental Rate
+              </label>
+              <Field
+                id="dailyRentalRate"
+                name="dailyRentalRate"
+                className="form-control"
+                value={values.dailyRentalRate}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                type="number"
+                error={
+                  touched.dailyRentalRate && errors.dailyRentalRate
+                    ? errors.dailyRentalRate
+                    : undefined
+                }
+              />
+              {touched.dailyRentalRate && errors.dailyRentalRate && (
+                <div className="alert alert-danger">
+                  {errors.dailyRentalRate}
+                </div>
+              )}
+              <div style={{ marginTop: "15px" }}>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn btn-primary"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </Formik>
+    </div>
   );
 };
 
